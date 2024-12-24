@@ -1,7 +1,9 @@
 const http = require("http");
 const fs = require("fs");
+// const { URL } = require("url");
+const querystring = require("querystring");
 // get array of users from json file
-const users = require("./users.json").users;
+const users = require("./users.json");
 const { write, rmSync } = require("fs");
 const validationCheck = require("./users-check");
 
@@ -53,6 +55,7 @@ const server = http.createServer((req, res) => {
       if (err) {
         res.writeHead(404, { "content-type": "application/json" });
         res.end(JSON.stringify({ message: err }));
+        return;
       } else {
         //parse data then assign it users
         const users = JSON.parse(data);
@@ -60,6 +63,66 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(users));
       }
     });
+  } else if (url.startsWith("/users") && method === "DELETE") {
+    const query = url.split("?")[1];
+    let obj = {};
+
+    if (query) {
+      const arr = query.split("&");
+      arr.forEach((str) => {
+        const item = str.split("=");
+        obj[item[0]] = item[1];
+      });
+    }
+
+    const deleteName = obj.username;
+    if (!deleteName) {
+      res.writeHead(400, { "content-type": "application/json" });
+      res.end(JSON.stringify({ message: "No username provided" }));
+      return;
+    }
+
+    const initialLength = users.length;
+    const updatedUsers = users.filter((user) => user.username !== deleteName);
+
+    if (updatedUsers.length < initialLength) {
+      fs.writeFile(
+        "./users.json",
+        JSON.stringify(updatedUsers, null, 2),
+        (err) => {
+          if (err) {
+            res.writeHead(500, { "content-type": "application/json" });
+            res.end(JSON.stringify({ message: "Error updating users file" }));
+            return;
+          }
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end(JSON.stringify({ message: "User deleted successfully" }));
+        }
+      );
+    } else {
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify({ message: "No user found with the provided username" })
+      );
+    }
+  } else if (url === "/users/usernames" && method === "GET") {
+    try {
+      const usernames = users.map((user) => user.username);
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(usernames));
+    } catch (err) {
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(JSON.stringify({ message: err }));
+    }
+  } else if (url === "/users/emails" && method === "GET") {
+    try {
+      const emails = users.map((user) => user.email);
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify(emails));
+    } catch (err) {
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(JSON.stringify({ message: err }));
+    }
   }
 });
 
