@@ -1,6 +1,6 @@
 const http = require("http");
 const fs = require("fs");
-// const { URL } = require("url");
+const { URL } = require("url");
 const querystring = require("querystring");
 // get array of users from json file
 const users = require("./users.json");
@@ -9,6 +9,17 @@ const validationCheck = require("./users-check");
 
 const server = http.createServer((req, res) => {
   const { url, method } = req;
+  const query = url.split("?")[1];
+  let obj = {};
+
+  if (query) {
+    const arr = query.split("&");
+    arr.forEach((str) => {
+      const item = str.split("=");
+      obj[item[0]] = item[1];
+    });
+  }
+
   if (url === "/users" && method === "POST") {
     let body = [];
     req.on("data", (chunk) => body.push(chunk));
@@ -57,24 +68,12 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ message: err }));
         return;
       } else {
-        //parse data then assign it users
         const users = JSON.parse(data);
-        res.writeHead(200, { "content-type": "ap/7plication/json" });
+        res.writeHead(200, { "content-type": "application/json" });
         res.end(JSON.stringify(users));
       }
     });
   } else if (url.startsWith("/users") && method === "DELETE") {
-    const query = url.split("?")[1];
-    let obj = {};
-
-    if (query) {
-      const arr = query.split("&");
-      arr.forEach((str) => {
-        const item = str.split("=");
-        obj[item[0]] = item[1];
-      });
-    }
-
     const deleteName = obj.username;
     if (!deleteName) {
       res.writeHead(400, { "content-type": "application/json" });
@@ -105,6 +104,59 @@ const server = http.createServer((req, res) => {
         JSON.stringify({ message: "No user found with the provided username" })
       );
     }
+  } else if (url.startsWith("/users") && method === "PUT") {
+    let body = [];
+    req.on("data", (chunk) => body.push(chunk));
+    req.on("end", () => {
+      try {
+        const Updateduser = JSON.parse(body.join(""));
+        const parsedUrl = new URL(`http://localhost:3000${url}`);
+        const userName = parsedUrl.searchParams.get("username");
+
+        if (!userName) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ message: "Username is required" }));
+          return;
+        }
+
+        const userIndex = users.findIndex((user) => user.username === userName);
+
+        if (userIndex === -1) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              message: "User not found with the provided username",
+            })
+          );
+          return;
+        }
+
+        users[userIndex] = { ...users[userIndex], ...Updateduser };
+        fs.writeFile("./users.json", JSON.stringify(users, null, 2), (err) => {
+          if (err) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(
+              JSON.stringify({
+                message: "Error updating the users file",
+              })
+            );
+            return;
+          }
+
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              message: "User updated successfully",
+              user: users[userIndex],
+            })
+          );
+        });
+      } catch (error) {
+        console.error("Error parsing JSON:", error);
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ message: "Invalid JSON" }));
+      }
+    });
   } else if (url === "/users/usernames" && method === "GET") {
     try {
       const usernames = users.map((user) => user.username);
