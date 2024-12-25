@@ -5,5 +5,12 @@
     "age": 23,
     "email": "jaxon3@gmail.com",
     "gender": "male"
+  },
+  {
+    "username": "Jackish",
+    "fullname": "Jack Richera",
+    "age": 23,
+    "email": "jacak3@gmail.com",
+    "gender": "male"
   }
 ]
