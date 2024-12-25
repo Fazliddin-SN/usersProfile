@@ -59,7 +59,7 @@ const server = http.createServer((req, res) => {
       } else {
         //parse data then assign it users
         const users = JSON.parse(data);
-        res.writeHead(200, { "content-type": "application/json" });
+        res.writeHead(200, { "content-type": "ap/7plication/json" });
         res.end(JSON.stringify(users));
       }
     });
